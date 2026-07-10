@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alexei Buga — Tur 3D Portofoliu</title>
+<meta name="description" content="Portofoliu 3D cinematic — Alexei Buga, Full-Stack Developer. Intră în casă și descoperă proiectele.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#07080f;
+    --card:rgba(10,12,24,.72);
+    --border:rgba(255,255,255,.12);
+    --text:#e8eaf6;
+    --muted:#9aa3c7;
+    --accent:#7c6cff;
+    --accent2:#00e5c3;
+    --accent3:#ff5c9e;
+    --grad:linear-gradient(135deg,#7c6cff 0%,#00e5c3 50%,#ff5c9e 100%);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    background:var(--bg);color:var(--text);
+    font-family:'Space Grotesk',sans-serif;line-height:1.6;
+  }
+  ::selection{background:var(--accent);color:#fff}
+
+  /* spatiu de scroll — filmul e condus de scroll */
+  .scroll-space{height:900vh}
+
+  canvas#scene{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
+
+  /* bara de progres */
+  .progress{position:fixed;top:0;left:0;height:3px;width:0%;background:var(--grad);z-index:40;transition:width .1s linear}
+
+  /* nav minimal */
+  nav{
+    position:fixed;top:0;left:0;right:0;z-index:30;
+    display:flex;justify-content:space-between;align-items:center;
+    padding:18px 28px;pointer-events:none;
+  }
+  .logo{font-weight:700;font-size:1.1rem;letter-spacing:-.02em;pointer-events:auto}
+  .logo span{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  nav a.gh{
+    pointer-events:auto;color:var(--muted);text-decoration:none;
+    font-family:'JetBrains Mono',monospace;font-size:.85rem;
+    border:1px solid var(--border);padding:7px 16px;border-radius:100px;
+    background:var(--card);backdrop-filter:blur(10px);transition:all .2s;
+  }
+  nav a.gh:hover{color:#fff;border-color:var(--accent)}
+
+  /* overlays sincronizate cu scroll */
+  .ov{
+    position:fixed;z-index:20;opacity:0;pointer-events:none;
+    transition:opacity .45s ease,transform .45s ease;transform:translateY(24px);
+    max-width:440px;
+  }
+  .ov.on{opacity:1;pointer-events:auto;transform:translateY(0)}
+
+  .ov-hero{left:50%;top:50%;transform:translate(-50%,-42%);text-align:center;max-width:720px;width:92%}
+  .ov-hero.on{transform:translate(-50%,-50%)}
+  .hero-tag{
+    font-family:'JetBrains Mono',monospace;font-size:.85rem;color:var(--accent2);
+    border:1px solid rgba(0,229,195,.35);background:rgba(0,229,195,.08);
+    padding:6px 16px;border-radius:100px;display:inline-block;margin-bottom:22px;
+    backdrop-filter:blur(8px);
+  }
+  .ov-hero h1{font-size:clamp(2.4rem,6.5vw,4.4rem);font-weight:700;line-height:1.05;letter-spacing:-.03em;margin-bottom:16px;text-shadow:0 4px 40px rgba(0,0,0,.8)}
+  .ov-hero h1 .grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .ov-hero p{color:var(--muted);font-size:clamp(1rem,2vw,1.15rem);margin-bottom:8px;text-shadow:0 2px 20px rgba(0,0,0,.9)}
+  .scroll-cta{
+    margin-top:34px;display:inline-flex;flex-direction:column;align-items:center;gap:8px;
+    color:var(--text);font-family:'JetBrains Mono',monospace;font-size:.85rem;
+  }
+  .mouse{
+    width:26px;height:42px;border:2px solid var(--muted);border-radius:14px;position:relative;
+  }
+  .mouse::after{
+    content:'';position:absolute;left:50%;top:7px;width:4px;height:8px;margin-left:-2px;
+    border-radius:4px;background:var(--accent2);animation:wheel 1.6s infinite;
+  }
+  @keyframes wheel{0%{transform:translateY(0);opacity:1}70%{transform:translateY(14px);opacity:0}100%{opacity:0}}
+
+  /* cardurile proiectelor */
+  .ov-card{
+    top:50%;transform:translateY(-38%);
+    background:var(--card);border:1px solid var(--border);border-radius:20px;
+    padding:28px;backdrop-filter:blur(14px);
+    box-shadow:0 24px 64px rgba(0,0,0,.55);
+    width:min(440px,92vw);
+  }
+  .ov-card.on{transform:translateY(-50%)}
+  .ov-left{left:5vw}
+  .ov-right{right:5vw}
+  .room-num{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent2);margin-bottom:10px}
+  .ov-card h3{font-size:1.5rem;font-weight:700;margin-bottom:10px;letter-spacing:-.02em}
+  .ov-card p{color:var(--muted);font-size:.95rem;margin-bottom:16px}
+  .tags{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+  .tag{
+    font-family:'JetBrains Mono',monospace;font-size:.72rem;padding:4px 10px;border-radius:6px;
+    background:rgba(124,108,255,.14);color:#b3a9ff;border:1px solid rgba(124,108,255,.3);
+  }
+  .tag.t2{background:rgba(0,229,195,.1);color:#6ff5dd;border-color:rgba(0,229,195,.3)}
+  .tag.t3{background:rgba(255,92,158,.1);color:#ff9cc2;border-color:rgba(255,92,158,.3)}
+  .links{display:flex;gap:12px}
+  .btn{
+    padding:10px 22px;border-radius:10px;text-decoration:none;font-weight:600;font-size:.9rem;
+    transition:transform .2s,box-shadow .2s;
+  }
+  .btn-primary{background:var(--grad);color:#fff}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(124,108,255,.45)}
+  .btn-ghost{border:1px solid var(--border);color:var(--text)}
+  .btn-ghost:hover{border-color:var(--accent);transform:translateY(-2px)}
+
+  /* contact final */
+  .ov-contact{left:50%;top:50%;transform:translate(-50%,-42%);text-align:center;max-width:560px;width:92%}
+  .ov-contact.on{transform:translate(-50%,-50%)}
+  .ov-contact h2{font-size:clamp(1.9rem,4.5vw,3rem);font-weight:700;letter-spacing:-.02em;margin-bottom:14px;text-shadow:0 4px 40px rgba(0,0,0,.8)}
+  .ov-contact h2 .grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .ov-contact p{color:var(--muted);margin-bottom:28px}
+  .links.center{justify-content:center}
+  .ov-contact .foot{margin-top:36px;color:var(--muted);font-size:.8rem;font-family:'JetBrains Mono',monospace}
+
+  /* indicator etapa (dreapta jos) */
+  .stage{
+    position:fixed;bottom:22px;right:26px;z-index:30;
+    font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--muted);
+    background:var(--card);border:1px solid var(--border);border-radius:100px;
+    padding:7px 16px;backdrop-filter:blur(10px);
+  }
+  .stage b{color:var(--accent2);font-weight:500}
+
+  .webgl-fail{
+    position:fixed;inset:0;display:none;place-items:center;text-align:center;
+    padding:24px;color:var(--muted);z-index:60;background:var(--bg);
+  }
+  .webgl-fail a{color:var(--accent2)}
+
+  @media(max-width:640px){
+    .ov-left,.ov-right{left:50%;right:auto;transform:translate(-50%,-38%)}
+    .ov-card.on{transform:translate(-50%,-50%)}
+    .stage{display:none}
+  }
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+
+<nav>
+  <div class="logo">alexei<span>.dev</span></div>
+  <a class="gh" href="https://github.com/HackHiveMind" target="_blank" rel="noopener">@HackHiveMind ↗</a>
+</nav>
+
+<canvas id="scene"></canvas>
+<div class="scroll-space"></div>
+
+<!-- HERO -->
+<div class="ov ov-hero" data-start="0" data-end="0.07">
+  <div class="hero-tag">🎬 experiență 3D — dă scroll pentru a intra</div>
+  <h1>Alexei Buga<br><span class="grad">Full-Stack Developer</span></h1>
+  <p>Bine ai venit la casa proiectelor mele.<br>Fiecare cameră ascunde un proiect real, în producție.</p>
+  <div class="scroll-cta"><div class="mouse"></div>intră în casă</div>
+</div>
+
+<!-- CAMERA 1: Arctior -->
+<div class="ov ov-card ov-left" data-start="0.27" data-end="0.40">
+  <div class="room-num">CAMERA 01 — frontend &amp; admin</div>
+  <h3>Arctior</h3>
+  <p>Site public de prezentare cu panou de administrare pentru categorii și produse.
+  Autentificare cu recuperare de parolă, validare Zod, suport multilingv și teste Vitest.</p>
+  <div class="tags">
+    <span class="tag">React 18</span><span class="tag">TypeScript</span>
+    <span class="tag t2">Vite</span><span class="tag t2">Tailwind</span>
+    <span class="tag t3">Vitest</span>
+  </div>
+  <div class="links">
+    <a class="btn btn-primary" href="https://arctior-fe.vercel.app" target="_blank" rel="noopener">Live ↗</a>
+    <a class="btn btn-ghost" href="https://github.com/HackHiveMind/Arctior-fe" target="_blank" rel="noopener">Cod</a>
+  </div>
+</div>
+
+<!-- CAMERA 2: PickTime FE -->
+<div class="ov ov-card ov-right" data-start="0.43" data-end="0.56">
+  <div class="room-num">CAMERA 02 — booking platform</div>
+  <h3>PickTime — iHUB Booking</h3>
+  <p>Platformă de rezervare a sălilor de conferință pentru iHUB Moldova: rezervări publice
+  fără cont, pe sloturi orare, plus interfață admin cu calendar săptămânal.</p>
+  <div class="tags">
+    <span class="tag">React</span><span class="tag">TypeScript</span>
+    <span class="tag t2">REST API</span><span class="tag t3">Calendar UI</span>
+  </div>
+  <div class="links">
+    <a class="btn btn-primary" href="https://pictime-ihub-booking-fe.vercel.app" target="_blank" rel="noopener">Live ↗</a>
+    <a class="btn btn-ghost" href="https://github.com/HackHiveMind/piktime-fe" target="_blank" rel="noopener">Cod</a>
+  </div>
+</div>
+
+<!-- CAMERA 3: PickTime API -->
+<div class="ov ov-card ov-left" data-start="0.60" data-end="0.72">
+  <div class="room-num">CAMERA 03 — backend &amp; API</div>
+  <h3>PickTime API</h3>
+  <p>Backend-ul platformei de booking: API Laravel cu endpoint-uri publice pentru săli,
+  disponibilitate și rezervări. PostgreSQL pe Supabase, migrări și teste automate.</p>
+  <div class="tags">
+    <span class="tag">Laravel</span><span class="tag">PHP 8.3</span>
+    <span class="tag t2">Supabase</span><span class="tag t2">PostgreSQL</span>
+  </div>
+  <div class="links">
+    <a class="btn btn-primary" href="https://pictime-ihub-be.vercel.app" target="_blank" rel="noopener">Live ↗</a>
+    <a class="btn btn-ghost" href="https://github.com/HackHiveMind/picktime-be" target="_blank" rel="noopener">Cod</a>
+  </div>
+</div>
+
+<!-- CAMERA 4: iStore -->
+<div class="ov ov-card ov-right" data-start="0.76" data-end="0.88">
+  <div class="room-num">CAMERA 04 — e-commerce</div>
+  <h3>iStore E-commerce</h3>
+  <p>Platformă e-commerce completă: catalog pe categorii, coș, checkout cu multiple metode
+  de plată și panou admin. Validare client + server, teste Jest și CI/CD cu GitHub Actions.</p>
+  <div class="tags">
+    <span class="tag">Node.js</span><span class="tag">Express</span>
+    <span class="tag t2">Supabase</span><span class="tag t3">Jest</span><span class="tag t3">CI/CD</span>
+  </div>
+  <div class="links">
+    <a class="btn btn-primary" href="https://website-chi-gray-85.vercel.app" target="_blank" rel="noopener">Live ↗</a>
+    <a class="btn btn-ghost" href="https://github.com/HackHiveMind/Website" target="_blank" rel="noopener">Cod</a>
+  </div>
+</div>
+
+<!-- CONTACT -->
+<div class="ov ov-contact" data-start="0.94" data-end="1.01">
+  <h2>Ai ajuns la <span class="grad">portal</span>.<br>Hai să construim ceva împreună.</h2>
+  <p>Colaborări, freelance sau full-time — scrie-mi oricând.</p>
+  <div class="links center">
+    <a class="btn btn-primary" href="mailto:abuga454@gmail.com">✉ abuga454@gmail.com</a>
+    <a class="btn btn-ghost" href="https://github.com/HackHiveMind" target="_blank" rel="noopener">GitHub ↗</a>
+  </div>
+  <div class="foot">© 2026 Alexei Buga · tur 3D construit cu Three.js</div>
+</div>
+
+<div class="stage" id="stage"><b>exterior</b> · scroll pentru a continua</div>
+<div class="webgl-fail" id="fail"><p>Browserul tău nu suportă WebGL.<br>Vezi versiunea clasică: <a href="portfolio-clasic.html">portfolio-clasic.html</a></p></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  if(typeof THREE==='undefined'){document.getElementById('fail').style.display='grid';return;}
+
+  const C1=0x7c6cff,C2=0x00e5c3,C3=0xff5c9e,DARK=0x1b1e33;
+
+  const canvas=document.getElementById('scene');
+  let renderer;
+  try{
+    renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+  }catch(e){document.getElementById('fail').style.display='grid';return;}
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  renderer.shadowMap.enabled=true;
+  renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure=1.2;
+  renderer.outputEncoding=THREE.sRGBEncoding;
+  const ANISO=renderer.capabilities.getMaxAnisotropy();
+
+  const scene=new THREE.Scene();
+  scene.background=new THREE.Color(0x05060d);
+  scene.fog=new THREE.Fog(0x05060d,10,75);
+
+  const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,.1,200);
+
+  /* ===== texturi procedurale (canvas) ===== */
+  function makeTex(fn,w,h){
+    w=w||512;h=h||512;
+    const cv=document.createElement('canvas');cv.width=w;cv.height=h;
+    fn(cv.getContext('2d'),w,h);
+    const t=new THREE.CanvasTexture(cv);
+    t.wrapS=t.wrapT=THREE.RepeatWrapping;
+    t.anisotropy=ANISO;t.encoding=THREE.sRGBEncoding;
+    return t;
+  }
+  function grain(x,w,h,n,dark){
+    for(let i=0;i<n;i++){
+      const g=Math.random();
+      x.fillStyle=g<.5
+        ?'rgba(0,0,0,'+(Math.random()*(dark||.12)).toFixed(3)+')'
+        :'rgba(255,255,255,'+(Math.random()*.05).toFixed(3)+')';
+      x.fillRect(Math.random()*w,Math.random()*h,1+Math.random()*2,1+Math.random()*2);
+    }
+  }
+  /* parchet de lemn */
+  function woodTex(){
+    return makeTex((x,w,h)=>{
+      x.fillStyle='#4a3421';x.fillRect(0,0,w,h);
+      const ph=64;
+      for(let py=0;py<h;py+=ph){
+        const s=Math.random()*30-8;
+        x.fillStyle='rgb('+(84+s)+','+(58+s*.7)+','+(36+s*.4)+')';
+        x.fillRect(0,py,w,ph-3);
+        for(let i=0;i<46;i++){
+          x.strokeStyle='rgba(38,22,10,'+(Math.random()*.4).toFixed(2)+')';
+          x.lineWidth=.6+Math.random();
+          x.beginPath();
+          const y=py+3+Math.random()*(ph-8);
+          x.moveTo(0,y);
+          x.bezierCurveTo(w*.3,y+Math.random()*8-4,w*.65,y+Math.random()*8-4,w,y+Math.random()*5-2.5);
+          x.stroke();
+        }
+        // noduri
+        if(Math.random()<.7){
+          const nx=Math.random()*w,ny=py+ph/2,r=3+Math.random()*6;
+          const grd=x.createRadialGradient(nx,ny,1,nx,ny,r);
+          grd.addColorStop(0,'rgba(30,16,6,.9)');grd.addColorStop(1,'rgba(30,16,6,0)');
+          x.fillStyle=grd;x.beginPath();x.arc(nx,ny,r,0,7);x.fill();
+        }
+        x.fillStyle='rgba(15,8,3,.95)';x.fillRect(0,py+ph-3,w,3);
+        const sx=Math.random()*w;
+        x.fillStyle='rgba(20,10,4,.85)';x.fillRect(sx,py,2,ph-3);
+      }
+      grain(x,w,h,5000,.15);
+    });
+  }
+  /* tencuiala / beton */
+  function plasterTex(base,stains){
+    return makeTex((x,w,h)=>{
+      x.fillStyle=base;x.fillRect(0,0,w,h);
+      grain(x,w,h,16000,.10);
+      for(let i=0;i<(stains||14);i++){
+        const gx=Math.random()*w,gy=Math.random()*h,r=30+Math.random()*100;
+        const grd=x.createRadialGradient(gx,gy,0,gx,gy,r);
+        grd.addColorStop(0,'rgba(0,0,0,.12)');grd.addColorStop(1,'rgba(0,0,0,0)');
+        x.fillStyle=grd;x.fillRect(gx-r,gy-r,r*2,r*2);
+      }
+      // fisuri fine
+      for(let i=0;i<6;i++){
+        x.strokeStyle='rgba(0,0,0,.18)';x.lineWidth=.7;
+        x.beginPath();
+        let cx2=Math.random()*w,cy=Math.random()*h;
+        x.moveTo(cx2,cy);
+        for(let s=0;s<6;s++){cx2+=Math.random()*40-20;cy+=Math.random()*30;x.lineTo(cx2,cy);}
+        x.stroke();
+      }
+    });
+  }
+  /* caramida */
+  function brickTex(){
+    return makeTex((x,w,h)=>{
+      x.fillStyle='#33343e';x.fillRect(0,0,w,h); // mortar
+      const bh=34,bw=86;
+      for(let row=0,y=0;y<h;y+=bh,row++){
+        const off=(row%2)*bw/2;
+        for(let bx=-bw;bx<w+bw;bx+=bw){
+          const s=Math.random()*26-13;
+          x.fillStyle='rgb('+(96+s)+','+(58+s*.6)+','+(50+s*.5)+')';
+          x.fillRect(bx+off+2,y+2,bw-4,bh-4);
+          grain(x,0,0,0);
+          for(let i=0;i<30;i++){
+            x.fillStyle='rgba(0,0,0,'+(Math.random()*.15).toFixed(2)+')';
+            x.fillRect(bx+off+2+Math.random()*(bw-6),y+2+Math.random()*(bh-6),1.5,1.5);
+          }
+        }
+      }
+      grain(x,w,h,7000,.12);
+    });
+  }
+  /* covor */
+  function carpetTex(){
+    return makeTex((x,w,h)=>{
+      x.fillStyle='#1e1230';x.fillRect(0,0,w,h);
+      grain(x,w,h,22000,.16);
+      // borduri
+      x.fillStyle='rgba(124,108,255,.5)';
+      x.fillRect(0,10,w,4);x.fillRect(0,h-14,w,4);
+      x.fillStyle='rgba(0,229,195,.35)';
+      x.fillRect(0,22,w,2);x.fillRect(0,h-24,w,2);
+      // motiv romburi
+      x.strokeStyle='rgba(255,255,255,.06)';x.lineWidth=1.4;
+      for(let i=-1;i<9;i++){
+        x.beginPath();
+        x.moveTo(i*70,h/2);x.lineTo(i*70+35,h/2-40);
+        x.lineTo(i*70+70,h/2);x.lineTo(i*70+35,h/2+40);
+        x.closePath();x.stroke();
+      }
+    });
+  }
+  /* pamant exterior */
+  function soilTex(){
+    return makeTex((x,w,h)=>{
+      x.fillStyle='#101322';x.fillRect(0,0,w,h);
+      grain(x,w,h,24000,.2);
+      for(let i=0;i<40;i++){ // pietricele
+        const g=110+Math.random()*40;
+        x.fillStyle='rgba('+g+','+g+','+(g+16)+','+(0.10+Math.random()*.14).toFixed(2)+')';
+        x.beginPath();
+        x.arc(Math.random()*w,Math.random()*h,1+Math.random()*2.6,0,7);x.fill();
+      }
+    });
+  }
+  /* piatra pentru alee */
+  function stoneTex(){
+    return makeTex((x,w,h)=>{
+      x.fillStyle='#3c4054';x.fillRect(0,0,w,h);
+      grain(x,w,h,12000,.22);
+      const grd=x.createRadialGradient(w/2,h/2,20,w/2,h/2,w/2);
+      grd.addColorStop(0,'rgba(255,255,255,.07)');grd.addColorStop(1,'rgba(0,0,0,.25)');
+      x.fillStyle=grd;x.fillRect(0,0,w,h);
+    },256,256);
+  }
+  /* tigla acoperis */
+  function roofTex(){
+    return makeTex((x,w,h)=>{
+      x.fillStyle='#181a2e';x.fillRect(0,0,w,h);
+      const th=42;
+      for(let row=0,y=0;y<h;y+=th,row++){
+        const off=(row%2)*40;
+        for(let bx=-80;bx<w+80;bx+=80){
+          const s=Math.random()*14-7;
+          x.fillStyle='rgb('+(34+s)+','+(37+s)+','+(64+s)+')';
+          x.beginPath();
+          x.moveTo(bx+off,y+th);x.lineTo(bx+off,y+8);
+          x.quadraticCurveTo(bx+off+40,y-6,bx+off+80,y+8);
+          x.lineTo(bx+off+80,y+th);x.closePath();x.fill();
+          x.strokeStyle='rgba(0,0,0,.4)';x.stroke();
+        }
+      }
+      grain(x,w,h,6000,.12);
+    });
+  }
+  /* arta abstracta pentru tablouri */
+  function artTex(c1,c2){
+    return makeTex((x,w,h)=>{
+      const grd=x.createLinearGradient(0,0,w,h);
+      grd.addColorStop(0,c1);grd.addColorStop(1,c2);
+      x.fillStyle=grd;x.fillRect(0,0,w,h);
+      for(let i=0;i<26;i++){
+        x.strokeStyle='rgba(255,255,255,'+(Math.random()*.4).toFixed(2)+')';
+        x.lineWidth=1+Math.random()*7;
+        x.beginPath();
+        x.arc(Math.random()*w,Math.random()*h,10+Math.random()*90,Math.random()*7,Math.random()*7);
+        x.stroke();
+      }
+      grain(x,w,h,4000,.1);
+    },256,256);
+  }
+
+  /* ===== materiale ===== */
+  const mat=(c,glow)=>new THREE.MeshStandardMaterial({
+    color:c,metalness:.3,roughness:.5,emissive:c,emissiveIntensity:glow!==undefined?glow:.15
+  });
+  function box(w,h,d,m){const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);b.castShadow=true;b.receiveShadow=true;return b;}
+
+  const woodT=woodTex();woodT.repeat.set(2.5,14);
+  const woodM=new THREE.MeshStandardMaterial({map:woodT,bumpMap:woodT,bumpScale:.02,roughness:.62,metalness:.08});
+  const plasterT=plasterTex('#2a2e4a');plasterT.repeat.set(6,1.6);
+  const plasterM=new THREE.MeshStandardMaterial({map:plasterT,bumpMap:plasterT,bumpScale:.015,roughness:.92,metalness:.02});
+  const plasterDarkT=plasterTex('#1c1f38',20);plasterDarkT.repeat.set(4,4);
+  const ceilM=new THREE.MeshStandardMaterial({map:plasterDarkT,roughness:.95,metalness:0});
+  const brickT=brickTex();brickT.repeat.set(3,2);
+  const brickM=new THREE.MeshStandardMaterial({map:brickT,bumpMap:brickT,bumpScale:.03,roughness:.88,metalness:.02});
+  const roofT=roofTex();roofT.repeat.set(3,1.4);
+  const roofM=new THREE.MeshStandardMaterial({map:roofT,bumpMap:roofT,bumpScale:.04,roughness:.8,metalness:.05});
+  const soilT=soilTex();soilT.repeat.set(60,60);
+  const soilM=new THREE.MeshStandardMaterial({map:soilT,roughness:.96,metalness:0});
+  const stoneM=new THREE.MeshStandardMaterial({map:stoneTex(),bumpMap:stoneTex(),bumpScale:.05,roughness:.85});
+  const carpT=carpetTex();carpT.repeat.set(1,10);carpT.rotation=0;
+  const carpM=new THREE.MeshStandardMaterial({map:carpT,bumpMap:carpT,bumpScale:.01,roughness:.98,metalness:0});
+
+  /* ===== cer instelat + luna ===== */
+  (function sky(){
+    const n=1100,pos=new Float32Array(n*3);
+    for(let i=0;i<n;i++){
+      pos[i*3]=(Math.random()-.5)*180;
+      pos[i*3+1]=Math.random()*70+5;
+      pos[i*3+2]=(Math.random()-.5)*180;
+    }
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+    scene.add(new THREE.Points(g,new THREE.PointsMaterial({color:0xaab4ff,size:.16,transparent:true,opacity:.8})));
+    const moonMesh=new THREE.Mesh(new THREE.SphereGeometry(2.4,24,24),
+      new THREE.MeshBasicMaterial({color:0xdfe4ff}));
+    moonMesh.position.set(26,34,45);scene.add(moonMesh);
+    const halo=new THREE.Mesh(new THREE.SphereGeometry(3.4,24,24),
+      new THREE.MeshBasicMaterial({color:0xaab4ff,transparent:true,opacity:.16}));
+    halo.position.copy(moonMesh.position);scene.add(halo);
+  })();
+
+  /* ===== teren + alee ===== */
+  const ground=new THREE.Mesh(new THREE.PlaneGeometry(240,240),soilM);
+  ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+  for(let i=0;i<9;i++){ // dale de piatra spre usa
+    const st=box(1.5-Math.random()*.2,.09,1.05,stoneM);
+    st.position.set((Math.random()-.5)*.3,.05,7.2+i*2.15);
+    st.rotation.y=(Math.random()-.5)*.2;
+    st.receiveShadow=true;scene.add(st);
+  }
+  // vegetatie stilizata (tufe intunecate)
+  for(let i=0;i<14;i++){
+    const s=.5+Math.random()*1.1;
+    const bush=new THREE.Mesh(new THREE.SphereGeometry(s,10,8),
+      new THREE.MeshStandardMaterial({color:0x0d2018,roughness:1}));
+    const side=Math.random()<.5?-1:1;
+    bush.position.set(side*(3.5+Math.random()*8),s*.55,8+Math.random()*18);
+    bush.scale.y=.7;bush.castShadow=true;scene.add(bush);
+  }
+
+  /* ===== casa: fatada cu usa ===== */
+  const facadeZ=5,hallW=9,hallH=5.6,hallEnd=-47;
+  (function facade(){
+    const g=new THREE.Group();
+    const left=box((hallW+8)/2-1.3,hallH+1.4,.6,brickM);
+    left.position.set(-((hallW+8)/4+0.65),(hallH+1.4)/2,0);g.add(left);
+    const right=left.clone();right.position.x*=-1;g.add(right);
+    const lintel=box(2.6,hallH+1.4-3.4,.6,brickM);
+    lintel.position.set(0,3.4+(hallH+1.4-3.4)/2,0);g.add(lintel);
+    // rama usii — neon cald
+    const fr=mat(C2,.9);
+    const l1=box(.14,3.4,.7,fr);l1.position.set(-1.3,1.7,0);g.add(l1);
+    const l2=l1.clone();l2.position.x=1.3;g.add(l2);
+    const l3=box(2.74,.14,.7,fr);l3.position.set(0,3.4,0);g.add(l3);
+    // ferestre cu lumina calda + pervaz
+    [-5.2,5.2].forEach(x=>{
+      const w=box(1.6,1.6,.7,mat(0xffd9a0,.85));w.position.set(x,2.6,0);g.add(w);
+      const sill=box(1.9,.12,.85,stoneM);sill.position.set(x,1.72,0);g.add(sill);
+      const cross1=box(.06,1.6,.72,new THREE.MeshStandardMaterial({color:0x0d0f20}));
+      cross1.position.set(x,2.6,.01);g.add(cross1);
+      const cross2=box(1.6,.06,.72,new THREE.MeshStandardMaterial({color:0x0d0f20}));
+      cross2.position.set(x,2.6,.01);g.add(cross2);
+    });
+    // acoperis cu tigla
+    const r1=box(9.6,.35,4.6,roofM);r1.position.set(-4.1,hallH+2.1,0);r1.rotation.z=.42;g.add(r1);
+    const r2=box(9.6,.35,4.6,roofM);r2.position.set(4.1,hallH+2.1,0);r2.rotation.z=-.42;g.add(r2);
+    g.position.z=facadeZ;
+    g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+    scene.add(g);
+  })();
+
+  /* ===== holul galeriei ===== */
+  (function hall(){
+    const len=facadeZ-hallEnd,zc=(facadeZ+hallEnd)/2;
+    // podea din parchet
+    const floor=new THREE.Mesh(new THREE.BoxGeometry(hallW,.3,len),woodM);
+    floor.position.set(0,.01,zc);floor.receiveShadow=true;scene.add(floor);
+    // covor central
+    const carpet=new THREE.Mesh(new THREE.PlaneGeometry(2.4,len-3),carpM);
+    carpet.rotation.x=-Math.PI/2;carpet.position.set(0,.175,zc);
+    carpet.receiveShadow=true;scene.add(carpet);
+    // pereti tencuiti
+    const wl=box(.5,hallH,len,plasterM);wl.position.set(-hallW/2,hallH/2,zc);scene.add(wl);
+    const wr=wl.clone();wr.position.x=hallW/2;scene.add(wr);
+    const back=box(hallW,hallH,.5,plasterM);back.position.set(0,hallH/2,hallEnd);scene.add(back);
+    // plinte
+    [[-1],[1]].forEach(([s])=>{
+      const sk=box(.12,.3,len,new THREE.MeshStandardMaterial({color:0x241a10,roughness:.6}));
+      sk.position.set(s*(hallW/2-.31),.31,zc);scene.add(sk);
+    });
+    // tavan
+    const ceil=new THREE.Mesh(new THREE.BoxGeometry(hallW,.25,len),ceilM);
+    ceil.position.set(0,hallH+.12,zc);ceil.receiveShadow=true;scene.add(ceil);
+    // benzi LED pe tavan
+    [[-1,C1],[1,C3]].forEach(([s,c])=>{
+      const line=box(.08,.06,len,mat(c,1));
+      line.position.set(s*(hallW/2-.5),hallH-.06,zc);scene.add(line);
+    });
+    // linii neon jos
+    [[-1,C2],[1,C2]].forEach(([s,c])=>{
+      const line=box(.06,.06,len,mat(c,.9));
+      line.position.set(s*(hallW/2-.28),.5,zc);scene.add(line);
+    });
+    // grinzi de lemn transversale
+    const beamM=new THREE.MeshStandardMaterial({map:woodT.clone(),roughness:.7});
+    beamM.map.repeat.set(1,.4);
+    for(let z=facadeZ-6;z>hallEnd;z-=6){
+      const beam=box(hallW,.3,.3,beamM);
+      beam.position.set(0,hallH-.2,z);scene.add(beam);
+    }
+    // tablouri pe peretii opusi modelelor
+    const arts=[
+      ['#2a1b5e','#00b39b',-1,-10],['#5e1b40','#4a3fd4',1,-22],
+      ['#1b5e4e','#d43f8a',-1,-34],['#3f2a8e','#ff8a5c',1,-44],
+    ];
+    arts.forEach(([a,b,side,z])=>{
+      const frame=box(.12,1.9,1.5,new THREE.MeshStandardMaterial({color:0x2c2214,roughness:.5,metalness:.3}));
+      frame.position.set(side*(hallW/2-.32),2.6,z);scene.add(frame);
+      const art=new THREE.Mesh(new THREE.PlaneGeometry(1.26,1.66),
+        new THREE.MeshStandardMaterial({map:artTex(a,b),roughness:.9}));
+      art.position.set(side*(hallW/2-.39),2.6,z);
+      art.rotation.y=side>0?-Math.PI/2:Math.PI/2;
+      scene.add(art);
+    });
+  })();
+
+  /* ===== praf plutitor in aer (atmosfera) ===== */
+  const dust=(function(){
+    const n=320,pos=new Float32Array(n*3),base=new Float32Array(n*3);
+    for(let i=0;i<n;i++){
+      base[i*3]=pos[i*3]=(Math.random()-.5)*8;
+      base[i*3+1]=pos[i*3+1]=.4+Math.random()*4.8;
+      base[i*3+2]=pos[i*3+2]=facadeZ-2-Math.random()*(facadeZ-hallEnd-4);
+    }
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+    const p=new THREE.Points(g,new THREE.PointsMaterial({
+      color:0xcfd6ff,size:.035,transparent:true,opacity:.5,
+      blending:THREE.AdditiveBlending,depthWrite:false
+    }));
+    scene.add(p);
+    return {p,base,n};
+  })();
+
+  /* ===== modelele proiectelor ===== */
+  function edges(mesh,op){
+    mesh.add(new THREE.LineSegments(
+      new THREE.EdgesGeometry(mesh.geometry),
+      new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:op||.2})
+    ));
+    return mesh;
+  }
+  const builders={
+    shop(g){
+      const b1=edges(box(1.5,.55,1.05,mat(C1)));b1.position.y=-.5;g.add(b1);
+      const b2=edges(box(1.05,.5,.8,mat(C2)));b2.position.y=.05;b2.rotation.y=.45;g.add(b2);
+      const b3=edges(box(.62,.45,.55,mat(C3)));b3.position.y=.55;b3.rotation.y=-.35;g.add(b3);
+      const ring=new THREE.Mesh(new THREE.TorusGeometry(1.3,.02,10,64),mat(C2,.8));
+      ring.rotation.x=Math.PI/2;ring.position.y=-.75;g.add(ring);
+      return t=>{ring.rotation.z=t*.5;};
+    },
+    calendar(g){
+      const page=edges(box(1.75,1.3,.14,mat(DARK,.05)));g.add(page);
+      const head=edges(box(1.75,.34,.16,mat(C2)));head.position.y=.48;g.add(head);
+      [-.5,.5].forEach(x=>{
+        const r=new THREE.Mesh(new THREE.TorusGeometry(.09,.028,10,24),mat(0x9aa3c7,.1));
+        r.position.set(x,.72,0);g.add(r);
+      });
+      let hl;
+      for(let r=0;r<3;r++)for(let c=0;c<4;c++){
+        const isHl=(r===1&&c===2);
+        const d=box(.2,.2,.06,mat(isHl?C3:0x4a5178,isHl?.8:.1));
+        d.position.set(-.54+c*.36,.14-r*.34,.1);
+        if(isHl)hl=d;g.add(d);
+      }
+      return t=>{if(hl)hl.material.emissiveIntensity=.5+Math.sin(t*3)*.35;};
+    },
+    gear(g){
+      const gear=new THREE.Group();
+      gear.add(new THREE.Mesh(new THREE.TorusGeometry(.68,.24,14,40),mat(C1)));
+      for(let i=0;i<8;i++){
+        const a=i/8*Math.PI*2;
+        const t=edges(box(.3,.3,.3,mat(C1)));
+        t.position.set(Math.cos(a)*.98,Math.sin(a)*.98,0);t.rotation.z=a;gear.add(t);
+      }
+      const hub=new THREE.Mesh(new THREE.CylinderGeometry(.3,.3,.55,24),mat(C2,.5));
+      hub.rotation.x=Math.PI/2;gear.add(hub);g.add(gear);
+      const orb=new THREE.Mesh(new THREE.SphereGeometry(.09,16,16),mat(C3,1));g.add(orb);
+      return t=>{
+        gear.rotation.z=t*.6;
+        orb.position.set(Math.cos(t*1.4)*1.4,Math.sin(t*1.4)*1.4,Math.sin(t*2)*.3);
+      };
+    },
+    laptop(g){
+      const base=edges(box(1.8,.1,1.2,mat(DARK,.05)));base.position.y=-.42;g.add(base);
+      const kb=box(1.55,.03,.9,mat(C1,.3));kb.position.set(0,-.36,.04);g.add(kb);
+      const sg=new THREE.Group();sg.position.set(0,-.42,-.58);sg.rotation.x=-.32;
+      const lid=edges(box(1.8,1.15,.08,mat(DARK,.05)));lid.position.y=.58;sg.add(lid);
+      const scr=new THREE.Mesh(new THREE.PlaneGeometry(1.6,.95),mat(C2,.75));
+      scr.position.set(0,.58,.05);sg.add(scr);
+      g.add(sg);g.rotation.x=.15;
+      return t=>{scr.material.emissiveIntensity=.6+Math.sin(t*2)*.2;};
+    }
+  };
+
+  /* eticheta cu numele proiectului (canvas texture) */
+  function label(text,accent){
+    const cv=document.createElement('canvas');cv.width=512;cv.height=128;
+    const x=cv.getContext('2d');
+    x.fillStyle='rgba(0,0,0,0)';x.fillRect(0,0,512,128);
+    x.font='700 56px Space Grotesk, sans-serif';
+    x.textAlign='center';x.textBaseline='middle';
+    x.shadowColor=accent;x.shadowBlur=26;
+    x.fillStyle='#fff';x.fillText(text,256,64);
+    const tx=new THREE.CanvasTexture(cv);
+    const p=new THREE.Mesh(new THREE.PlaneGeometry(3,.75),
+      new THREE.MeshBasicMaterial({map:tx,transparent:true}));
+    return p;
+  }
+
+  /* camerele-galerie: piedestal + model + lumina */
+  const updaters=[];
+  const rooms=[
+    {model:'shop',   name:'ARCTIOR',  x: 2.9, z:-4,  c:C1},
+    {model:'calendar',name:'PICKTIME',x:-2.9, z:-16, c:C2},
+    {model:'gear',   name:'API',      x: 2.9, z:-28, c:C3},
+    {model:'laptop', name:'iSTORE',   x:-2.9, z:-40, c:C2},
+  ];
+  const marbleM=new THREE.MeshStandardMaterial({
+    map:plasterTex('#3a3f5e',8),roughness:.35,metalness:.25
+  });
+  rooms.forEach(r=>{
+    const ped=new THREE.Mesh(new THREE.CylinderGeometry(.85,1.05,1.1,28),marbleM);
+    ped.position.set(r.x,.71,r.z);
+    ped.castShadow=true;ped.receiveShadow=true;scene.add(ped);
+    const ringP=new THREE.Mesh(new THREE.TorusGeometry(.95,.03,10,48),mat(r.c,1));
+    ringP.rotation.x=Math.PI/2;ringP.position.set(r.x,1.31,r.z);scene.add(ringP);
+
+    const g=new THREE.Group();
+    g.position.set(r.x,2.45,r.z);
+    g.scale.setScalar(.85);
+    scene.add(g);
+    const upd=builders[r.model](g)||function(){};
+    g.traverse(o=>{if(o.isMesh){o.castShadow=true;}});
+    updaters.push(t=>{g.rotation.y=t*.4;upd(t);});
+
+    const lb=label(r.name,'#'+r.c.toString(16).padStart(6,'0'));
+    lb.position.set(r.x,4.25,r.z);
+    scene.add(lb);
+    updaters.push(()=>{lb.lookAt(camera.position.x,4.1,camera.position.z);});
+
+    // spot de galerie cu umbre reale
+    const spot=new THREE.SpotLight(0xfff2dd,1.5,12,.55,.55,1.2);
+    spot.position.set(r.x*.45,hallH-.25,r.z+.6);
+    spot.target.position.set(r.x,1.4,r.z);
+    spot.castShadow=true;
+    spot.shadow.mapSize.set(512,512);
+    spot.shadow.bias=-.002;
+    scene.add(spot);scene.add(spot.target);
+    // corpul lampii
+    const lamp=new THREE.Mesh(new THREE.CylinderGeometry(.1,.16,.24,16),
+      new THREE.MeshStandardMaterial({color:0x111320,roughness:.4,metalness:.6}));
+    lamp.position.copy(spot.position);lamp.position.y-=.05;
+    lamp.lookAt(spot.target.position);lamp.rotateX(Math.PI/2);
+    scene.add(lamp);
+
+    const pl=new THREE.PointLight(r.c,.8,7);
+    pl.position.set(r.x*.55,3.4,r.z);scene.add(pl);
+
+    // rama neon pe perete in spatele modelului
+    const frame=box(.1,2.6,2.6,mat(r.c,.9));
+    frame.position.set(r.x>0?hallW/2-.31:-hallW/2+.31,2.4,r.z);
+    scene.add(frame);
+    const frameIn=box(.12,2.2,2.2,new THREE.MeshStandardMaterial({color:0x0d0f20,roughness:.9}));
+    frameIn.position.copy(frame.position);scene.add(frameIn);
+  });
+
+  /* portal final */
+  const portal=new THREE.Mesh(new THREE.TorusGeometry(1.7,.09,16,64),mat(C3,1));
+  portal.position.set(0,2.4,hallEnd+.4);scene.add(portal);
+  const portalIn=new THREE.Mesh(new THREE.CircleGeometry(1.6,48),
+    new THREE.MeshBasicMaterial({color:0x14082a}));
+  portalIn.position.set(0,2.4,hallEnd+.38);scene.add(portalIn);
+  const portalGlow=new THREE.PointLight(C3,1.4,14);
+  portalGlow.position.set(0,2.5,hallEnd+2);scene.add(portalGlow);
+  updaters.push(t=>{
+    portal.rotation.z=t*.4;
+    portal.material.emissiveIntensity=.8+Math.sin(t*2.4)*.3;
+  });
+
+  /* lumini generale */
+  scene.add(new THREE.AmbientLight(0x707aa8,.3));
+  scene.add(new THREE.HemisphereLight(0x30365e,0x0a0805,.35));
+  const moon=new THREE.DirectionalLight(0xaab6ff,.55);
+  moon.position.set(26,34,45);
+  moon.castShadow=true;
+  moon.shadow.mapSize.set(2048,2048);
+  moon.shadow.camera.left=-22;moon.shadow.camera.right=22;
+  moon.shadow.camera.top=22;moon.shadow.camera.bottom=-22;
+  moon.shadow.camera.near=1;moon.shadow.camera.far=120;
+  moon.shadow.bias=-.001;
+  moon.target.position.set(0,0,10);
+  scene.add(moon);scene.add(moon.target);
+  const doorLight=new THREE.PointLight(C2,1.2,12);
+  doorLight.position.set(0,2.6,facadeZ+1.2);scene.add(doorLight);
+  // lumina calda din ferestre pe pamant
+  [-5.2,5.2].forEach(x=>{
+    const wl=new THREE.PointLight(0xffc880,.7,7);
+    wl.position.set(x,2.4,facadeZ+.8);scene.add(wl);
+  });
+
+  /* ===== traseul camerei (filmul) ===== */
+  const V=(x,y,z)=>new THREE.Vector3(x,y,z);
+  const camPath=new THREE.CatmullRomCurve3([
+    V(0,4.6,27),        // start: departe, vedere de ansamblu
+    V(0,2.4,17),        // apropiere
+    V(0,1.9,9),         // in fata usii
+    V(0,1.8,2.2),       // pragul
+    V(-1.7,1.8,-4),     // camera 1 (model pe dreapta)
+    V(0,1.8,-10),       // tranzitie
+    V(1.7,1.8,-16),     // camera 2
+    V(0,1.8,-22),       // tranzitie
+    V(-1.7,1.8,-28),    // camera 3
+    V(0,1.8,-34),       // tranzitie
+    V(1.7,1.8,-40),     // camera 4
+    V(0,2.1,-43.5),     // spre portal
+    V(0,2.3,-44.8),     // fata in fata cu portalul
+  ]);
+  const lookPath=new THREE.CatmullRomCurve3([
+    V(0,2.4,6),
+    V(0,2.2,5.5),
+    V(0,1.9,3),
+    V(0,1.8,-2),
+    V(2.9,1.9,-4),
+    V(-1.2,1.9,-13),
+    V(-2.9,1.9,-16),
+    V(1.2,1.9,-25),
+    V(2.9,1.9,-28),
+    V(-1.2,1.9,-37),
+    V(-2.9,1.9,-40),
+    V(0,2.4,-47),
+    V(0,2.4,-47),
+  ]);
+
+  /* ===== scroll & overlays ===== */
+  let target=0,progress=0;
+  const bar=document.getElementById('progress');
+  const stageEl=document.getElementById('stage');
+  const ovs=[...document.querySelectorAll('.ov')].map(el=>({
+    el,start:+el.dataset.start,end:+el.dataset.end
+  }));
+  const stages=[
+    [0,'exterior'],[0.12,'intrarea'],[0.27,'camera 01 — Arctior'],
+    [0.43,'camera 02 — PickTime'],[0.60,'camera 03 — API'],
+    [0.76,'camera 04 — iStore'],[0.94,'portal — contact'],
+  ];
+  function onScroll(){
+    const max=document.documentElement.scrollHeight-innerHeight;
+    target=max>0?Math.min(1,Math.max(0,scrollY/max)):0;
+  }
+  addEventListener('scroll',onScroll,{passive:true});
+  onScroll();
+
+  /* parallax usor cu mouse-ul */
+  let mx=0,my=0;
+  addEventListener('mousemove',e=>{
+    mx=(e.clientX/innerWidth-.5);
+    my=(e.clientY/innerHeight-.5);
+  });
+
+  function resize(){
+    renderer.setSize(innerWidth,innerHeight,false);
+    camera.aspect=innerWidth/innerHeight;
+    camera.updateProjectionMatrix();
+  }
+  addEventListener('resize',resize);
+  resize();
+
+  const clock=new THREE.Clock();
+  const camPos=new THREE.Vector3(),lookPos=new THREE.Vector3();
+  (function loop(){
+    requestAnimationFrame(loop);
+    const t=clock.getElapsedTime();
+
+    // damping cinematic
+    progress+=(target-progress)*.06;
+    bar.style.width=(progress*100).toFixed(2)+'%';
+
+    camPath.getPointAt(Math.min(progress,.9999),camPos);
+    lookPath.getPointAt(Math.min(progress,.9999),lookPos);
+    camera.position.copy(camPos);
+    camera.position.x+=mx*.35;
+    camera.position.y+=-my*.25;
+    camera.lookAt(lookPos);
+
+    updaters.forEach(u=>u(t));
+
+    // praf plutitor
+    const dp=dust.p.geometry.attributes.position;
+    for(let i=0;i<dust.n;i++){
+      dp.array[i*3]  =dust.base[i*3]  +Math.sin(t*.3+i*1.7)*.25;
+      dp.array[i*3+1]=dust.base[i*3+1]+Math.sin(t*.5+i*2.3)*.3;
+    }
+    dp.needsUpdate=true;
+
+    // overlays
+    ovs.forEach(o=>{
+      const on=progress>=o.start&&progress<=o.end;
+      o.el.classList.toggle('on',on);
+    });
+    // indicator etapa
+    let st=stages[0][1];
+    for(const [p,name] of stages){if(progress>=p)st=name;}
+    stageEl.innerHTML='<b>'+st+'</b> · scroll pentru a continua';
+
+    renderer.render(scene,camera);
+  })();
+})();
+</script>
+</body>
+</html>
